@@ -1,0 +1,18 @@
+FROM hf.co/singhjagpreet/llama3.1_8b-Gurmukhi_GGUF:latest
+
+TEMPLATE """Given Shabad from Gurbani, depicts its meaning and return response in Gurmukhi only.{{ if .Prompt }}
+
+### Shabad:
+{{ .Prompt }}{{ end }}
+
+
+### Arath:
+{{ .Response }}<|end_of_text|>"""
+
+PARAMETER stop "<|end_header_id|>"
+PARAMETER stop "<|eot_id|>"
+PARAMETER stop "<|start_header_id|>"
+PARAMETER stop "<|end_of_text|>"
+PARAMETER stop "<|reserved_special_token_"
+PARAMETER temperature 1.5
+PARAMETER min_p 0.1
