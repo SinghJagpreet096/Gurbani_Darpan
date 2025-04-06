@@ -13,8 +13,16 @@
         <input type="text" id="userInput" placeholder="Type your question here...">
         <br>
         <button onclick="sendToBackend()">Submit</button>
+
         <!-- Waiting Spinner -->
-        <div id="waitingSpinner">...</div>
+        <div id="waitingSpinner">
+            <div class="dot-loader">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+        </div>
+        <!-- <div id="waitingSpinner">...</div> -->
         <!-- Response Text -->
         <p id="responseText"></p>
     </div>

@@ -12,6 +12,7 @@ function sendToBackend() {
     .then(response => response.json())
     .then(data => {
         // Hide the spinner once the response is received
+        console.log("Showing spinner")
         document.getElementById("waitingSpinner").style.display = "none";
         
         document.getElementById("responseText").innerText = "Response: " + data.response;

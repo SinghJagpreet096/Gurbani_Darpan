@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from model import Model
+from config import Config
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend-backend communication
-m = Model("llama3.2")
+model_name = Config().model
+m = Model(model_name)
 
 @app.route("/response", methods=["POST"])
 def response():

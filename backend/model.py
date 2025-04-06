@@ -1,5 +1,6 @@
 from langchain_ollama import ChatOllama
 from langchain_core.messages import AIMessage
+from config import Config
 
 
 class Model:
@@ -11,19 +12,14 @@ class Model:
         )
 
     def generate(self, text: str) -> str:
-        o = self.llm.invoke(text)
+        messages = [                    # Change below!
+    {"role": "user", "content": text},
+]
+        o = self.llm.invoke(messages)
         return o.content
-# model_name = "llama3.2"
-# llm = ChatOllama(
-#     model=model_name,
-#     # temperature=0,
-#     # other params...
-# )
 
-
-# o = llm.invoke("ੴ ਸਤਿ ਨਾਮੁ ਕਰਤਾ ਪੁਰਖੁ ਨਿਰਭਉ ਨਿਰਵੈਰੁਅਕਾਲ ਮੂਰਤਿ ਅਜੂਨੀ ਸੈਭੰ ਗੁਰ ਪ੍ਰਸਾਦਿ ॥")
-# print(o.content)
 if __name__ == "__main__":
-    m = Model("llama3.2")
+    model_name = Config().model
+    m = Model(model_name)
     o = m.generate("ੴ ਸਤਿ ਨਾਮੁ ਕਰਤਾ ਪੁਰਖੁ ਨਿਰਭਉ ਨਿਰਵੈਰੁਅਕਾਲ ਮੂਰਤਿ ਅਜੂਨੀ ਸੈਭੰ ਗੁਰ ਪ੍ਰਸਾਦਿ ॥")
     print(o)
