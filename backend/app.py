@@ -12,6 +12,9 @@ m = Model(model_name)
 def response():
     data = request.json
     user_input = data.get("text", "")
+    print("user input", user_input)
+    if not user_input:
+        return jsonify({"error": "No input provided"}), 400
     response_text = m.generate(user_input)  # Simple response logic
     print("response generated", response_text)
     return jsonify({"response": response_text})
