@@ -7,19 +7,19 @@ class Model:
     def __init__(self, model_name: str):
         self.llm = ChatOllama(
             model=model_name,
-            temperature=0.5,
-            max_tokens=256,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
+            # temperature=0.5,
+            max_tokens=1024,
+            # top_p=1,
+            # frequency_penalty=0,
+            # presence_penalty=0,
             # other params...
         )
 
     def generate(self, text: str) -> str:
-        messages = [                    # Change below!
-    {"role": "user", "content": f"{text}"},
-]
-        o = self.llm.invoke(messages)
+#         messages = [                    # Change below!
+#     {"role": "user", "content": text},
+# ]
+        o = self.llm.invoke(text)
         return o.content
 
 if __name__ == "__main__":
