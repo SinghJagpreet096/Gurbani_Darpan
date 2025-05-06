@@ -1,3 +1,7 @@
 langchain-ollama
 flask
 flask_cors
+banidb
+datasets
+sentence_transformers
+scikit-learn
