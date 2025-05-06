@@ -15,7 +15,7 @@ function sendToBackend() {
         console.log("Showing spinner")
         document.getElementById("waitingSpinner").style.display = "none";
         
-        document.getElementById("responseText").innerText = "Response: " + data.response;
+        document.getElementById("responseText").innerText = "" + data.response;
     })
     .catch(error => console.error("Error:", error));
 }
