@@ -5,3 +5,4 @@ banidb
 datasets
 sentence_transformers
 scikit-learn
+langchain_community
