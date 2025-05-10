@@ -5,13 +5,17 @@ import time
 import os
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import sqlite3
+from config import Config
 
+
+cnf = Config()
 # Configuration
-BASE_URL = "https://api.banidb.com/v2/angs"
-SOURCE_ID = 'G'  # Gurmukhi source
-CHUNK_SIZE = 50  # Process 50 Angs at a time
-MAX_ANGS = 1430  # Total Angs in SGGS Ji
-OUTPUT_DIR = "gurbani_chunks"
+BASE_URL = cnf.api_url  # API URL
+SOURCE_ID = cnf.source_id  # Source ID for Guru Granth Sahib Ji
+CHUNK_SIZE = cnf.chunk_size  # Process 50 Angs at a time
+MAX_ANGS = cnf.max_angs # Total Angs in SGGS Ji
+OUTPUT_DIR = cnf.database_dir  # Directory to save SQLite database
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Setup retry mechanism
@@ -56,9 +60,12 @@ def save_chunk(chunk_data, chunk_id):
         return
     
     df = pd.DataFrame(chunk_data)
-    output_path = f"{OUTPUT_DIR}/chunk_{chunk_id:03d}.parquet"
-    df.to_parquet(output_path, index=False)
-    print(f"\nSaved {len(df)} verses to {output_path}")
+    # Step 3: Save to SQLite
+    conn = sqlite3.connect(f"{OUTPUT_DIR}mydata.sqlite")
+    df.to_sql("api_data", conn, if_exists="append", index=False)
+    conn.close()
+    print("✅ Data saved to SQLite (data/mydata.sqlite)")
+   
 
 # Main processing loop
 current_chunk = []
@@ -77,15 +84,3 @@ for ang_no in tqdm(range(1, MAX_ANGS + 1), desc="Processing Angs"):
     # Be gentle with the API
     time.sleep(0.15)
 
-# Merge all chunks (optional)
-def merge_chunks():
-    """Combine all chunk files into one dataset"""
-    chunk_files = [f for f in os.listdir(OUTPUT_DIR) if f.startswith('chunk_')]
-    df = pd.concat(
-        (pd.read_parquet(f"{OUTPUT_DIR}/{f}") for f in chunk_files),
-        ignore_index=True
-    )
-    df.to_parquet("merged_gurbani.parquet", index=False)
-    print(f"\nMerged {len(df)} total verses")
-
-merge_chunks()
