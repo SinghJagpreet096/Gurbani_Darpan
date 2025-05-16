@@ -89,10 +89,4 @@ if __name__ == "__main__":
     query = "What does Gurbani say about ego?"
     response = embedding.search(query, top_k=2)
     print(response)
-    # print(res)
-
-# #     # Initialize
-#     searcher = GurbaniSearch()
-
-# # # Example search
-#     results = searcher.search("What is the divine command?")   
+    

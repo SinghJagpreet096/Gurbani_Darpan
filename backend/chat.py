@@ -1,6 +1,7 @@
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama # Local LLM
+from query_transformer import QueryEnhancer # Function to rewrite and expand queries
 
 from embedding import Embedding # Function to get verses from the database
 
@@ -10,12 +11,8 @@ class Model:
         self.embeddings = Embedding()
         self.llm = ChatOllama(
             model = model_name,
-            # temperature=0.5,
-            # max_tokens=1024,
-            # top_p=1,
-            # frequency_penalty=0,
-            # presence_penalty=0,
         )
+        self.enhancer = QueryEnhancer(model_name=model_name) # Initialize query enhancer
         self.prompt = ChatPromptTemplate.from_template("""You are a Gurbani expert. Answer using ONLY these verses:
                                                        {context}
 
@@ -27,8 +24,11 @@ class Model:
     def response(self, query:str) -> str:
         dataset_path = "backend/db/merged_shabad.parquet"
         embeddings_path = "backend/db/shabad_embeddings.parquet"
+        ## rewrite query
+        rewritten_query = self.enhancer.rewrite_query(query) # "Gurbani verses discussing ego and arrogance"
+        print(f"rewritten query: {rewritten_query}")
         self.embeddings.generate_embeddings(dataset_path, embeddings_path,issample=True) # Generate embeddings
-        verses, metadata = self.embeddings.search(query, top_k=3) 
+        verses, metadata = self.embeddings.search(rewritten_query, top_k=3) 
         print("verse:", verses)
         print(f"{'-'*50}\n metadata:{metadata}") # Get verses from previous function
         chain = self.prompt | self.llm | StrOutputParser()
