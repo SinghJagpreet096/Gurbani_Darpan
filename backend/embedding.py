@@ -16,11 +16,11 @@ MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
 class Embedding:
     def __init__(self, model_path: str = MODEL_PATH):
         self.model = SentenceTransformer(model_path)
-        self.embeddings_path = EMBEDDINGS_PATH
+        # self.embeddings_path = EMBEDDINGS_PATH
         self.dataset = None
         
 
-    def load_dataset(self, dataset_path: str = MAIN_DATA_PATH, sample_size: int = 100, issample: bool = False):
+    def load_dataset(self, dataset_path: str, sample_size: int = 100, issample: bool = False):
         if issample:
             self.dataset = pd.read_parquet(dataset_path).sample(sample_size, random_state=RANDOM_STATE)
             self.dataset = self.dataset.reset_index(drop=True)
@@ -29,27 +29,27 @@ class Embedding:
             self.dataset = pd.read_parquet(dataset_path)
             print(f"Loaded {len(self.dataset)} pre-embedded verses")
 
-    def is_embedding_exist(self):
-        if os.path.exists(self.embeddings_path):
+    def is_embedding_exist(self, dataset_path: str, embeddings_path: str, issample: bool = False):
+        if os.path.exists(embeddings_path):
             # Load existing sample with embeddings
-            self.dataset = pd.read_parquet(self.embeddings_path)
+            self.dataset = pd.read_parquet(embeddings_path)
             print(f"Loaded {len(self.dataset)} pre-embedded verses from sample")
         else:
-            self.load_dataset(MAIN_DATA_PATH, SAMPLE_SIZE, issample=False)
+            self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
 
-    def generate_embeddings(self):
-        self.is_embedding_exist()
+    def generate_embeddings(self, dataset_path: str, embeddings_path: str, issample: bool = False):
+        self.is_embedding_exist(dataset_path, embeddings_path, issample)
         if 'embeddings' not in self.dataset.columns:
             print("Generating fresh embeddings...")
             embeddings = []
-            for verse in tqdm(self.dataset['verse'], desc="Processing"):
-                embeddings.append(self.model.encode(verse))
+            for shabad in tqdm(self.dataset['shabad_text'], desc="Processing"):
+                embeddings.append(self.model.encode(shabad))
             self.dataset['embeddings'] = embeddings
-            self.dataset.to_parquet(self.embeddings_path)
-            print(f"Saved embeddings to {self.embeddings_path}")
+            self.dataset.to_parquet(embeddings_path)
+            print(f"Saved embeddings to {embeddings_path}")
         embeddings_array = np.stack(self.dataset['embeddings'].values)
     
-    def top_k_verse(self, query: str, top_k: int = 3):
+    def search(self, query: str, top_k: int = 3):
         # Embed the query
         query_embed = self.model.encode(query)
         
@@ -67,27 +67,32 @@ class Embedding:
         response = f"Query: {query}\n\n"
         for _, row in results.iterrows():
             response += f"""
+            Shabad Text: {row['shabad_text']},
             Verse: {row['verse']},
-            Verse: {row['verseId']},
-            Translation_en: {row['translation_en']},
-            Translation_pu: {row['translation_pu']}
+            Translation_english: {row['translation_en']},
+            Translation_punjabi: {row['translation_pu']}
             Source: Ang {row['ang']},
-            Shabad: {row['shabadId']},
-            Similarity: {sim_scores[_]:.2f}
+            Writer: {row['writer']},
             {'-'*50}
             """
-        return response
-        
+        return response, results
+
+   
         
 if __name__ == "__main__":
     embedding = Embedding()
     # embedding.is_embedding_exist()
-    embedding.generate_embeddings()
+    dataset_path = "backend/db/merged_shabad.parquet"
+    embeddings_path = "backend/db/shabad_embeddings.parquet"
+    embedding.generate_embeddings(dataset_path, embeddings_path, issample=True)
     # Example usage
     query = "What does Gurbani say about ego?"
-    response = embedding.top_k_verse(query, top_k=2)
+    response = embedding.search(query, top_k=2)
     print(response)
     # print(res)
-# 5. Example Usage
-# print(answer_gurbani("What does Gurbani say about ego?"))
-# print(answer_gurbani("How to find peace?", top_k=2))
+
+# #     # Initialize
+#     searcher = GurbaniSearch()
+
+# # # Example search
+#     results = searcher.search("What is the divine command?")   

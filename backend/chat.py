@@ -25,16 +25,22 @@ class Model:
 
 
     def response(self, query:str) -> str:
-        self.embeddings.generate_embeddings() # Generate embeddings
-        verses = self.embeddings.top_k_verse(query, top_k=3) 
-        print(verses) # Get verses from previous function
+        dataset_path = "backend/db/merged_shabad.parquet"
+        embeddings_path = "backend/db/shabad_embeddings.parquet"
+        self.embeddings.generate_embeddings(dataset_path, embeddings_path,issample=True) # Generate embeddings
+        verses, metadata = self.embeddings.search(query, top_k=3) 
+        print("verse:", verses)
+        print(f"{'-'*50}\n metadata:{metadata}") # Get verses from previous function
         chain = self.prompt | self.llm | StrOutputParser()
         return chain.invoke({"question": query, "context": verses})
         
 if __name__ == "__main__":
     model_name = "llama3.2"
-    e = Embedding()
-    e.generate_embeddings()
+    # embedding = Embedding()
+    # # embedding.is_embedding_exist()
+    # dataset_path = "backend/db/merged_shabad.parquet"
+    # embeddings_path = "backend/db/shabad_embeddings.parquet"
+    # embedding.generate_embeddings(dataset_path, embeddings_path, issample=True)
     m = Model(model_name)
     o = m.response("What does Gurbani say about ego?")
     
