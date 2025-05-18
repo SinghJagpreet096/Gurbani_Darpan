@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # embeddings_path = "backend/db/shabad_embeddings.parquet"
     # embedding.generate_embeddings(dataset_path, embeddings_path, issample=True)
     m = Model(model_name)
-    o = m.response("What does Gurbani say about ego?")
+    o = m.response("Solution to loneliness and depression")
     
     print(o)
 

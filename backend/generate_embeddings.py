@@ -4,6 +4,9 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
 import os
+import sqlite3
+import chromadb
+from chromadb.config import Settings
 
 # Config
 SAMPLE_SIZE = 100
@@ -64,20 +67,71 @@ class Embedding:
         return self.dataset, embeddings_array
     
     
+class chromaEmbedding(Embedding):
+    def __init__(self, model_path: str = MODEL_PATH):
+        super().__init__(model_path)
+        self.model = SentenceTransformer(model_path, device='cpu')
+        # Initialize with low-memory settings
+        self.client = chromadb.Client(Settings(chroma_db_impl="duckdb+parquet",
+                                                persist_directory="./chroma_db",
+                                                anonymized_telemetry=False
+                            ))
 
-   
+
+    def load_dataset(self, dataset_path: str, sample_size: int = 100, issample: bool = False):
+        conn = sqlite3.connect(dataset_path)
+        if issample:
+            query = f"SELECT * FROM api_data ORDER BY RANDOM() LIMIT {sample_size}"
+            dataset = pd.read_sql_query(query, conn)
+            dataset = dataset.reset_index(drop=True)
+            print(f"Created new sample of {len(dataset)} verses")
+        else:
+            query = "SELECT * FROM api_data"
+            dataset = pd.read_sql_query(query, conn)
+            print(f"Loaded {len(dataset)} pre-embedded verses")
+        conn.close()
+        return dataset
+    
+    def is_embedding_exist(self, dataset_path: str, embeddings_path: str, issample: bool = False):
+        return os.path.exists(embeddings_path)
+    
+    def load_embeddings(self, embeddings_path: str):
+        pass
+
+    def generate_embeddings(self, dataset_path: str, embeddings_path: str, issample: bool = False):    
+        if self.is_embedding_exist(dataset_path, embeddings_path, issample):
+            print("embedding already exists")
+            return
+        else:
+            self.dataset = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
+
+        collection = self.client.create_collection(
+            name="gurbani",
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=self.model.encode
+        )
         
+        # Batch processing for low RAM
+        df = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
+        batch_size = 100  # Adjust based on available RAM
+        
+        for i in range(0, len(df), batch_size):
+            batch = df.iloc[i:i+batch_size]
+            collection.add(
+                documents=batch['verse'].tolist(),
+                metadatas=batch[['ang', 'raag', 'shabadId']].to_dict('records'),
+                ids=[f"id_{x}" for x in range(i, i+len(batch))]
+            )
+
+        self.client.persist()
+        print(f"Stored {len(df)} verses")
+
 if __name__ == "__main__":
-    embedding = Embedding()
-    # embedding.is_embedding_exist()
-    dataset_path = "backend/db/merged_shabad.parquet"
-    embeddings_path = "backend/db/shabad_embeddings.parquet"
-    d, e = embedding.generate_embeddings(dataset_path, embeddings_path, issample=True)
-    print(f"Dataset shape: {d.shape}")
-    print(f"Embeddings shape: {e.shape}")
     # Example usage
-    # query = "What does Gurbani say about ego?"
-    # response = embedding.search(query, top_k=2)
-    # print(response)
+    embedding = chromaEmbedding()
+    dataset_path = "backend/data/mydata.sqlite"
+    d = embedding.load_dataset(dataset_path=dataset_path)
+    print(d.head())
+    embedding.generate_embeddings(dataset_path=dataset_path, embeddings_path=EMBEDDINGS_PATH, issample=True)
 
     
