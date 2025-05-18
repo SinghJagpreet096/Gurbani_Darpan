@@ -17,8 +17,8 @@ class QueryEnhancer:
 
     def rewrite_query(self, query: str) -> str:
         """Improves retrieval-focused phrasing"""
-        prompt = ChatPromptTemplate.from_template("""Rewrite this Gurbani-related search query 2-3 variants to optimize for retrieving the most relevant shabads.
-                                                   Return ONLY the rewritten queries with no additional text:
+        prompt = ChatPromptTemplate.from_template("""Rewrite this Gurbani-related search query to optimize for retrieving the most relevant shabads.
+         Return ONLY the rewritten query with no additional text:
         Original: {query}
         Rewritten:""")
         # prompt = f"""
@@ -26,19 +26,20 @@ class QueryEnhancer:
         # Original: {query}
         # Rewritten:"""
         
-        rewritter_chain = prompt | self.rewriter
+        rewritter_chain = prompt | self.rewriter 
         rewritten = rewritter_chain.invoke({"query": query})
         return rewritten.content.strip()
         
-    def expand_query(self, query: str) -> List[str]:
+    def expand_query(self, query: str) -> str:
         """Generates semantic variations"""
-        prompt = f"""
+        prompt = ChatPromptTemplate.from_template("""Generate 3 Punjabi/English variations of this Gurbani query:
         Generate 3 Punjabi/English variations of this Gurbani query:
         {query}
-        1."""
+        1.""")
         
-        expansions = self.expander(prompt, max_length=100, num_return_sequences=3)
-        return [q.split('\n')[0].strip('123. ') for q in expansions]
+        expander_chain = prompt | self.expander
+        expansions = expander_chain.invoke({"query": query})
+        return expansions.content.strip()
 
 if __name__ == "__main__":
     # Example usage
@@ -46,5 +47,6 @@ if __name__ == "__main__":
     enhancer = QueryEnhancer(model_name="llama3.2") 
     query = "What does Guru say about ego?"
     rewritten = enhancer.rewrite_query(query) 
-    print(rewritten) # "Gurbani verses discussing ego and arrogance"
-    # expansions = enhancer.expand_query(query)  # ["haumai references in SGGS", ...]
+    print("rewritten:",rewritten) # "Gurbani verses discussing ego and arrogance"
+    expansions = enhancer.expand_query(query)  # ["haumai references in SGGS", ...]
+    print("expansions:",expansions) # ["haumai references in SGGS", ...]

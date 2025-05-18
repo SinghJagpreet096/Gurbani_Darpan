@@ -2,13 +2,14 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama # Local LLM
 from query_transformer import QueryEnhancer # Function to rewrite and expand queries
-
-from embedding import Embedding # Function to get verses from the database
+from create_context import Context # Function to create context
+from generate_embeddings import Embedding # Function to get verses from the database
 
 
 class Model:
     def __init__(self, model_name: str):
         self.embeddings = Embedding()
+        self.context = Context()
         self.llm = ChatOllama(
             model = model_name,
         )
@@ -18,7 +19,8 @@ class Model:
 
                                                        Question: {question}
 
-                                                       Answer in 2-3 sentences and ALWAYS cite Ang numbers:""")
+                                                       Cite and explain the verse(s) in detail first in English and then in Punjabi.
+                                                       Answer:""")
 
 
     def response(self, query:str) -> str:
@@ -27,8 +29,8 @@ class Model:
         ## rewrite query
         rewritten_query = self.enhancer.rewrite_query(query) # "Gurbani verses discussing ego and arrogance"
         print(f"rewritten query: {rewritten_query}")
-        self.embeddings.generate_embeddings(dataset_path, embeddings_path,issample=True) # Generate embeddings
-        verses, metadata = self.embeddings.search(rewritten_query, top_k=3) 
+        # self.embeddings.generate_embeddings(dataset_path, embeddings_path,issample=False) # Generate embeddings
+        verses, metadata = self.context.provide_context(rewritten_query, top_k=1) 
         print("verse:", verses)
         print(f"{'-'*50}\n metadata:{metadata}") # Get verses from previous function
         chain = self.prompt | self.llm | StrOutputParser()
