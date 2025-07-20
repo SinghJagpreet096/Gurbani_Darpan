@@ -6,6 +6,7 @@ import os
 from tqdm import tqdm
 from config import Config
 cnf = Config()
+import sqlite3
 # Config
 MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
 MAIN_DATA_PATH = cnf.database_dir + "merged_shabad.parquet"
@@ -70,14 +71,37 @@ class contextChroma(chromaEmbedding):
     def __init__(self):
         super().__init__()
         
+    def get_verseid(self, query: str, top_k: int = 3):
+        results = self.collection.query(
+            query_texts=[query],  # Chroma will embed this for you
+            n_results=top_k  # how many results to return
+        )
+        return results['ids']
     
+    def get_shabad(self, verse_ids: list):
+        verse_ids = tuple(map(int, verse_ids))
+        with sqlite3.connect(Config.database_path) as conn:
+                query = f"""SELECT verse, shabadId from api_data
+                            WHERE shabadId IN (SELECT DISTINCT shabadId FROM api_data WHERE verseId in {verse_ids})
+                            order by verseId
+                """
+                df = pd.read_sql_query(query, conn)
+        shabads = []
+        for shabadid in df['shabadId'].unique():
+            shabad = df['verse'][df['shabadId'] == shabadid].tolist()
+            shabad = " ".join(shabad)
+            shabads.append(shabad)
+        return shabads
+
 
     def provide_context(self, query: str, top_k: int = 3):
-        results = self.collection.query(
-            query_texts=[query], # Chroma will embed this for you
-            n_results=top_k # how many results to return
-        )
-        return results
+        verse_ids = self.get_verseid(query, top_k)
+        # shabads = []
+        # for i in verse_ids[0]:
+        #     shabad = self.get_shabad(i)
+        #     shabads.append(shabad)
+        shabads = self.get_shabad(verse_ids[0])
+        return shabads
 
 
   
@@ -85,5 +109,7 @@ if __name__ == "__main__":
     context = contextChroma()
     query = "What does Gurbani say about ego?"
     response = context.provide_context(query)
-    print(response)
+    for s in response:
+        print(s)
+        print("-" * 50)
     # print(f"{'-'*50}\n metadata:{results}") # Get verses from previous function

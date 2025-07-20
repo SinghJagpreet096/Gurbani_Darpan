@@ -74,7 +74,7 @@ class chromaEmbedding():
         # super().__init__(model_path)
         self.model = SentenceTransformer(model_path, device='cpu')
         # Initialize with low-memory settings
-        self.client = chromadb.PersistentClient(path=Config().embeddings_path)
+        self.client = chromadb.PersistentClient(path=Config().embeddings_path)  # Reset the client to clear any existing collections
         self.collection = self.client.get_or_create_collection(
             name="gurbani",
         )
@@ -101,11 +101,8 @@ class chromaEmbedding():
         pass
 
     def generate_embeddings(self, dataset_path: str, embeddings_path: str, issample: bool = False):
-        if self.is_embedding_exist(embeddings_path):
-            print("embedding already exists")
-            return
-        else:
-            self.dataset = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
+        
+        self.dataset = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
 
         
         # Batch processing for low RAM
@@ -123,7 +120,7 @@ class chromaEmbedding():
         self.collection.add(
             documents=df['verse'].tolist(),
             metadatas=df[['ang', 'raag', 'shabadId']].to_dict('records'),
-            ids=[f"id_{x}" for x in range(len(df))]
+            ids=[f"{x}" for x in range(len(df))]
         )
 
         # self.client.persist()
