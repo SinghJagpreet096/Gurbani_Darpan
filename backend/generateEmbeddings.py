@@ -8,11 +8,13 @@ import sqlite3
 import chromadb
 from chromadb.config import Settings
 
+from config import Config
+
 # Config
 SAMPLE_SIZE = 100
 RANDOM_STATE = 42
-MAIN_DATA_PATH = "backend/db/merged_gurbani.parquet"
-EMBEDDINGS_PATH = "backend/db/gurbani_embeddings.parquet"
+MAIN_DATA_PATH = Config().database_path
+EMBEDDINGS_PATH = Config().embeddings_path
 MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
 
 # 1. Load or Create Sample
@@ -67,15 +69,15 @@ class Embedding:
         return self.dataset, embeddings_array
     
     
-class chromaEmbedding(Embedding):
+class chromaEmbedding():
     def __init__(self, model_path: str = MODEL_PATH):
-        super().__init__(model_path)
+        # super().__init__(model_path)
         self.model = SentenceTransformer(model_path, device='cpu')
         # Initialize with low-memory settings
-        self.client = chromadb.Client(Settings(chroma_db_impl="duckdb+parquet",
-                                                persist_directory="./chroma_db",
-                                                anonymized_telemetry=False
-                            ))
+        self.client = chromadb.PersistentClient(path=Config().embeddings_path)
+        self.collection = self.client.get_or_create_collection(
+            name="gurbani",
+        )
 
 
     def load_dataset(self, dataset_path: str, sample_size: int = 100, issample: bool = False):
@@ -91,47 +93,49 @@ class chromaEmbedding(Embedding):
             print(f"Loaded {len(dataset)} pre-embedded verses")
         conn.close()
         return dataset
-    
-    def is_embedding_exist(self, dataset_path: str, embeddings_path: str, issample: bool = False):
+
+    def is_embedding_exist(self, embeddings_path: str):
         return os.path.exists(embeddings_path)
     
     def load_embeddings(self, embeddings_path: str):
         pass
 
-    def generate_embeddings(self, dataset_path: str, embeddings_path: str, issample: bool = False):    
-        if self.is_embedding_exist(dataset_path, embeddings_path, issample):
+    def generate_embeddings(self, dataset_path: str, embeddings_path: str, issample: bool = False):
+        if self.is_embedding_exist(embeddings_path):
             print("embedding already exists")
             return
         else:
             self.dataset = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
 
-        collection = self.client.create_collection(
-            name="gurbani",
-            metadata={"hnsw:space": "cosine"},
-            embedding_function=self.model.encode
-        )
         
         # Batch processing for low RAM
-        df = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
+        # df = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
+        df = self.dataset
         batch_size = 100  # Adjust based on available RAM
         
-        for i in range(0, len(df), batch_size):
-            batch = df.iloc[i:i+batch_size]
-            collection.add(
-                documents=batch['verse'].tolist(),
-                metadatas=batch[['ang', 'raag', 'shabadId']].to_dict('records'),
-                ids=[f"id_{x}" for x in range(i, i+len(batch))]
-            )
+        # for i in range(0, len(df), batch_size):
+        #     batch = df.iloc[i:i+batch_size]
+        #     self.collection.add(
+        #         documents=batch['verse'].tolist(),
+        #         metadatas=batch[['ang', 'raag', 'shabadId']].to_dict('records'),
+        #         ids=[f"id_{x}" for x in range(i, i+len(batch))]
+        #     )
+        self.collection.add(
+            documents=df['verse'].tolist(),
+            metadatas=df[['ang', 'raag', 'shabadId']].to_dict('records'),
+            ids=[f"id_{x}" for x in range(len(df))]
+        )
 
-        self.client.persist()
+        # self.client.persist()
         print(f"Stored {len(df)} verses")
 
 if __name__ == "__main__":
     # Example usage
     embedding = chromaEmbedding()
-    dataset_path = "backend/data/mydata.sqlite"
-    d = embedding.load_dataset(dataset_path=dataset_path)
+    # dataset_path = "backend/data/mydata.sqlite"
+    dataset_path = Config().database_path
+    d = embedding.load_dataset(dataset_path=dataset_path, sample_size=200)
     print(d.head())
-    embedding.generate_embeddings(dataset_path=dataset_path, embeddings_path=EMBEDDINGS_PATH, issample=True)
+    embedding.generate_embeddings(dataset_path=dataset_path, embeddings_path=Config().embeddings_path, issample=True)
 
     

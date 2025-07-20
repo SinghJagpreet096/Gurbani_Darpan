@@ -1,15 +1,15 @@
-from generate_embeddings import Embedding
+from generateEmbeddings import Embedding, chromaEmbedding
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 import numpy as np
 import os
 from tqdm import tqdm
 from config import Config
-# cnf = Config()
-# # Config
-# MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
-# MAIN_DATA_PATH = cnf.database_dir + "merged_shabad.parquet"
-# EMBEDDINGS_PATH = cnf.database_dir + "shabad_embeddings.parquet"
+cnf = Config()
+# Config
+MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
+MAIN_DATA_PATH = cnf.database_dir + "merged_shabad.parquet"
+EMBEDDINGS_PATH = cnf.database_dir + "shabad_embeddings.parquet"
 # Load or Create Sample
 
 class Context(Embedding):
@@ -65,10 +65,25 @@ class Context(Embedding):
                 }
             
             return response, metadata
+
+class contextChroma(chromaEmbedding):
+    def __init__(self):
+        super().__init__()
+        
     
+
+    def provide_context(self, query: str, top_k: int = 3):
+        results = self.collection.query(
+            query_texts=[query], # Chroma will embed this for you
+            n_results=top_k # how many results to return
+        )
+        return results
+
+
+  
 if __name__ == "__main__":
-    context = Context()
+    context = contextChroma()
     query = "What does Gurbani say about ego?"
-    response, results = context.provide_context(query)
+    response = context.provide_context(query)
     print(response)
-    print(f"{'-'*50}\n metadata:{results}") # Get verses from previous function
+    # print(f"{'-'*50}\n metadata:{results}") # Get verses from previous function
