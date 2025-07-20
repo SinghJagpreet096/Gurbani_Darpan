@@ -80,18 +80,29 @@ class contextChroma(chromaEmbedding):
     
     def get_shabad(self, verse_ids: list):
         verse_ids = tuple(map(int, verse_ids))
+        print(f"verse_ids: {verse_ids}")
         with sqlite3.connect(Config.database_path) as conn:
-                query = f"""SELECT verse, shabadId from api_data
+                query = f"""SELECT verse, shabadId, writer, ang from api_data
                             WHERE shabadId IN (SELECT DISTINCT shabadId FROM api_data WHERE verseId in {verse_ids})
                             order by verseId
                 """
                 df = pd.read_sql_query(query, conn)
-        shabads = []
+        contexts = []
         for shabadid in df['shabadId'].unique():
+            context = {}
+            # context['shabad'] = ""
+            # context['writer'] = ""
+            # context['ang'] = ""
             shabad = df['verse'][df['shabadId'] == shabadid].tolist()
+            writer = df['writer'][df['shabadId'] == shabadid].iloc[0]
+            ang = df['ang'][df['shabadId'] == shabadid].iloc[0]
+
             shabad = " ".join(shabad)
-            shabads.append(shabad)
-        return shabads
+            context['shabad'] = shabad
+            context['writer'] = writer
+            context['ang'] = ang
+            contexts.append(context)
+        return contexts
 
 
     def provide_context(self, query: str, top_k: int = 3):
@@ -109,7 +120,6 @@ if __name__ == "__main__":
     context = contextChroma()
     query = "What does Gurbani say about ego?"
     response = context.provide_context(query)
-    for s in response:
-        print(s)
+    for i in response:
+        print(i)
         print("-" * 50)
-    # print(f"{'-'*50}\n metadata:{results}") # Get verses from previous function
