@@ -1,0 +1,18 @@
+# chroma_config.yml
+settings:
+  persist_directory: "./chroma_db"
+  embedding_function: "multi-qa-MiniLM-L6-cos-v1"  # Lightweight model
+  allow_reset: true
+  
+optimization:
+  max_batch_size: 128  # For low-RAM systems
+  quantization: "scalar"  # 4x memory reduction
+
+telemetry:
+  enabled: true
+  endpoint: "http://localhost:4317"  # OTLP endpoint
+  metrics:
+    enabled: true
+    interval: 60s  # Reduce frequency
+  traces:
+    enabled: false  # Disable if RAM <8GB
