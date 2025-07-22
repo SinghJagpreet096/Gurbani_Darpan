@@ -8,6 +8,7 @@ class Config:
     embeddings_path: str = f"{database_dir}chroma_db"
     max_angs: int = 1430
     chunk_size: int = max_angs // 10
+    collection_name: str = 'test_gurbani_collection'
     
     api_url: str = 'https://api.banidb.com/v2/angs'
     source_id: str = 'G' ## Guru Granth Sahib Ji

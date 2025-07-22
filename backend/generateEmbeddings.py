@@ -68,15 +68,24 @@ class Embedding:
         embeddings_array = np.stack(list(self.dataset['embeddings'].values))
         return self.dataset, embeddings_array
     
-    
+
+     
 class chromaEmbedding():
     def __init__(self, model_path: str = MODEL_PATH):
         # super().__init__(model_path)
-        self.model = SentenceTransformer(model_path, device='cpu')
+        self.model = SentenceTransformer(model_path)
         # Initialize with low-memory settings
-        self.client = chromadb.PersistentClient(path=Config().embeddings_path)  # Reset the client to clear any existing collections
+        self.client = chromadb.HttpClient(
+            ssl=True,
+            host="https://api.trychroma.com:8000",
+            tenant='61c02c3f-fe20-493e-bfb4-d5c2efe25b2e',
+            database='gurbani_db',
+            headers={
+                'x-chroma-token': 'ck-FBohCSaniLtjVWrDJeCrB8qiWwpSZGv1hD2kqsxfQa3s'
+            }
+        )
         self.collection = self.client.get_or_create_collection(
-            name="gurbani",
+            name='test',
         )
 
 
@@ -100,30 +109,30 @@ class chromaEmbedding():
     def load_embeddings(self, embeddings_path: str):
         pass
 
-    def generate_embeddings(self, dataset_path: str, embeddings_path: str, issample: bool = False):
-        
-        self.dataset = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
+    def generate_embeddings(self, dataset_path: str, embeddings_path: str, issample: bool = False, sample_size: int = 100):
 
-        
+        if issample:
+            self.dataset = self.load_dataset(dataset_path, sample_size, issample)
+        else:
+            self.dataset = self.load_dataset(dataset_path, sample_size, issample)
+
         # Batch processing for low RAM
         # df = self.load_dataset(dataset_path, SAMPLE_SIZE, issample)
         df = self.dataset
         batch_size = 100  # Adjust based on available RAM
         
-        # for i in range(0, len(df), batch_size):
-        #     batch = df.iloc[i:i+batch_size]
-        #     self.collection.add(
-        #         documents=batch['verse'].tolist(),
-        #         metadatas=batch[['ang', 'raag', 'shabadId']].to_dict('records'),
-        #         ids=[f"id_{x}" for x in range(i, i+len(batch))]
-        #     )
-        self.collection.add(
-            documents=df['verse'].tolist(),
-            metadatas=df[['ang', 'raag', 'shabadId']].to_dict('records'),
-            ids=[f"{x}" for x in range(len(df))]
-        )
+        for i in tqdm(range(0, len(df), batch_size), desc="Processing batches"):
+            batch = df.iloc[i:i+batch_size]
+            self.collection.upsert(
+                documents=batch['verse'].tolist(),
+                metadatas=batch[['ang', 'raag', 'shabadId']].to_dict('records'),
+                # embeddings=self.model.encode(batch['verse'].tolist(), show_progress_bar=False).tolist(),
+                ids=[str(i) for i in batch['verseId']]
+            )
+            # print(f"Processed batch {i//batch_size + 1}/{(len(df) + batch_size - 1) // batch_size} with {len(batch)} verses}")
 
         # self.client.persist()
+        self.collection.peek()
         print(f"Stored {len(df)} verses")
 
 if __name__ == "__main__":
@@ -133,6 +142,8 @@ if __name__ == "__main__":
     dataset_path = Config().database_path
     d = embedding.load_dataset(dataset_path=dataset_path, sample_size=200)
     print(d.head())
-    embedding.generate_embeddings(dataset_path=dataset_path, embeddings_path=Config().embeddings_path, issample=True)
+    embedding.generate_embeddings(dataset_path=dataset_path,
+                                   embeddings_path=Config().embeddings_path, 
+                                   issample=True, sample_size=10)
 
     
