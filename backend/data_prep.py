@@ -6,8 +6,7 @@ import os
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import sqlite3
-from config import Config
-
+from backend.config import Config
 
 cnf = Config()
 # Configuration
@@ -68,20 +67,25 @@ def save_chunk(chunk_data, chunk_id):
    
 
 # Main processing loop
-current_chunk = []
-chunk_id = 0
-
-for ang_no in tqdm(range(1, MAX_ANGS + 1), desc="Processing Angs"):
-    verses = process_ang(ang_no)
-    current_chunk.extend(verses)
+def main():
     
-    # Save chunk when reaching CHUNK_SIZE
-    if ang_no % CHUNK_SIZE == 0 or ang_no == MAX_ANGS:
-        save_chunk(current_chunk, chunk_id)
-        current_chunk = []
-        chunk_id += 1
-    
-    # Be gentle with the API
-    time.sleep(0.15)
+
+    current_chunk = []
+    chunk_id = 0
+
+    for ang_no in tqdm(range(1, MAX_ANGS + 1), desc="Processing Angs"):
+        verses = process_ang(ang_no)
+        current_chunk.extend(verses)
+        
+        # Save chunk when reaching CHUNK_SIZE
+        if ang_no % CHUNK_SIZE == 0 or ang_no == MAX_ANGS:
+            save_chunk(current_chunk, chunk_id)
+            current_chunk = []
+            chunk_id += 1
+        
+        # Be gentle with the API
+        time.sleep(0.15)
 
 
+if __name__ == "__main__":
+    main() 

@@ -8,10 +8,11 @@ import os
 import sqlite3
 import chromadb
 from chromadb.config import Settings
+from backend.config import Config
 
 load_dotenv()
 
-from config import Config
+
 
 # Config
 SAMPLE_SIZE = 100
@@ -141,9 +142,8 @@ class chromaEmbedding():
         self.collection.peek()
         print(f"Stored {len(df)} verses")
 
-if __name__ == "__main__":
-    # pass
-    # Example usage
+def main():
+   # ample usage
     embedding = chromaEmbedding()
     # dataset_path = "backend/data/mydata.sqlite"
     dataset_path = Config().database_path
@@ -152,5 +152,7 @@ if __name__ == "__main__":
     embedding.generate_embeddings(dataset_path=dataset_path,
                                    embeddings_path=Config().embeddings_path, 
                                    issample=True, sample_size=10)
+if __name__ == "__main__":
+    main()
 
     

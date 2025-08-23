@@ -1,10 +1,10 @@
-from generateEmbeddings import Embedding, chromaEmbedding
+from backend.generateEmbeddings import Embedding, chromaEmbedding
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 import numpy as np
 import os
 from tqdm import tqdm
-from config import Config
+from backend.config import Config
 cnf = Config()
 import sqlite3
 # Config

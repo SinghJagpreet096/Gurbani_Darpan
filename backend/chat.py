@@ -1,10 +1,10 @@
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama # Local LLM
-from query_transformer import QueryEnhancer # Function to rewrite and expand queries
-from create_context import Context, contextChroma # Function to create context
-from generateEmbeddings import Embedding # Function to get verses from the database
-from config import Config # Configuration settings for the application
+from backend.query_transformer import QueryEnhancer # Function to rewrite and expand queries
+from backend.create_context import Context, contextChroma # Function to create context
+from backend.generateEmbeddings import Embedding # Function to get verses from the database
+from backend.config import Config # Configuration settings for the application
 
 
 class Model:
@@ -43,16 +43,19 @@ class Model:
         print("shabad:", shabads)
         chain = self.prompt | self.llm | StrOutputParser()
         return chain.invoke({"question": query, "context": shabads})
+    
+
+def main():
+    model_name = "llama3.2"
+    m = Model(model_name)
+    while True:
+        query = input("Enter your question (or 'exit' to quit): ")
+        if query.lower() == 'exit':
+            break
+
+        o = m.response(query)
+        print(o)
 
 if __name__ == "__main__":
-    model_name = "llama3.2"
-    # embedding = Embedding()
-    # # embedding.is_embedding_exist()
-    # dataset_path = "backend/db/merged_shabad.parquet"
-    # embeddings_path = "backend/db/shabad_embeddings.parquet"
-    # embedding.generate_embeddings(dataset_path, embeddings_path, issample=True)
-    m = Model(model_name)
-    o = m.response("Solution to loneliness and depression")
-    
-    print(o)
+    main()
 
