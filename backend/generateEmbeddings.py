@@ -1,3 +1,4 @@
+from flask.cli import load_dotenv
 import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -8,6 +9,8 @@ import sqlite3
 import chromadb
 from chromadb.config import Settings
 
+load_dotenv()
+
 from config import Config
 
 # Config
@@ -16,6 +19,7 @@ RANDOM_STATE = 42
 MAIN_DATA_PATH = Config().database_path
 EMBEDDINGS_PATH = Config().embeddings_path
 MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
+secret_key = os.getenv("chroma_token")
 
 # 1. Load or Create Sample
 class Embedding:
