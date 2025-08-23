@@ -1,4 +1,4 @@
-from flask.cli import load_dotenv
+from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -19,7 +19,9 @@ RANDOM_STATE = 42
 MAIN_DATA_PATH = Config().database_path
 EMBEDDINGS_PATH = Config().embeddings_path
 MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
-secret_key = os.getenv("chroma_token")
+chroma_key = os.getenv("chroma_token")
+
+
 
 # 1. Load or Create Sample
 class Embedding:
@@ -85,7 +87,7 @@ class chromaEmbedding():
             tenant='61c02c3f-fe20-493e-bfb4-d5c2efe25b2e',
             database='gurbani_db',
             headers={
-                'x-chroma-token': 'ck-FBohCSaniLtjVWrDJeCrB8qiWwpSZGv1hD2kqsxfQa3s'
+                'x-chroma-token': chroma_key
             }
         )
         self.collection = self.client.get_or_create_collection(
@@ -140,6 +142,7 @@ class chromaEmbedding():
         print(f"Stored {len(df)} verses")
 
 if __name__ == "__main__":
+    # pass
     # Example usage
     embedding = chromaEmbedding()
     # dataset_path = "backend/data/mydata.sqlite"
