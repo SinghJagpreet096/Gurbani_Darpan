@@ -9,6 +9,8 @@ import sqlite3
 import chromadb
 from chromadb.config import Settings
 from backend.config import Config
+import chromadb.utils.embedding_functions as embedding_functions
+from backend.embedding_function import MyEmbeddingFunction
 
 load_dotenv()
 
@@ -21,6 +23,13 @@ MAIN_DATA_PATH = Config().database_path
 EMBEDDINGS_PATH = Config().embeddings_path
 MODEL_PATH = 'paraphrase-multilingual-mpnet-base-v2'
 chroma_key = os.getenv("chroma_token")
+
+
+# huggingface_ef = embedding_functions.HuggingFaceEmbeddingFunction(
+#     api_key=os.getenv("HF_TOKEN_R"),
+#     model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+# )
+
 
 
 
@@ -92,7 +101,8 @@ class chromaEmbedding():
             }
         )
         self.collection = self.client.get_or_create_collection(
-            name='test',
+            name='paraphrase-multilingual-mpnet-base-v2',
+            embedding_function=MyEmbeddingFunction()
         )
 
 
@@ -151,7 +161,7 @@ def main():
     print(d.head())
     embedding.generate_embeddings(dataset_path=dataset_path,
                                    embeddings_path=Config().embeddings_path, 
-                                   issample=True, sample_size=10)
+                                   issample=True, sample_size=10000)
 if __name__ == "__main__":
     main()
 
