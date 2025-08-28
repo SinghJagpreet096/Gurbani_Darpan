@@ -53,39 +53,87 @@ def process_ang(ang_no):
         print(f"\nError processing Ang {ang_no}: {str(e)[:100]}")
         return []
 
-def save_chunk(chunk_data, chunk_id):
-    """Save a chunk of data to Parquet"""
+def setup_database():
+    """Create SQLite database with proper table structure and primary key"""
+    conn = sqlite3.connect(f"{OUTPUT_DIR}mydata.sqlite")
+    cursor = conn.cursor()
+    
+    # Create table with verseId as primary key
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS api_data (
+        verseId TEXT PRIMARY KEY,
+        ang INTEGER,
+        pageNo INTEGER,
+        lineNo INTEGER,
+        writer TEXT,
+        raag TEXT,
+        shabadId TEXT,
+        verse TEXT,
+        translation_en TEXT,
+        translation_pu TEXT
+    )
+    """)
+    
+    conn.commit()
+    conn.close()
+    print("✅ Database setup completed with verseId as primary key")
+
+def save_chunk(chunk_data):
+    """Save a chunk of data to SQLite, ignoring duplicates"""
     if not chunk_data:
         return
     
     df = pd.DataFrame(chunk_data)
-    # Step 3: Save to SQLite
+    
+    # Connect to SQLite database
     conn = sqlite3.connect(f"{OUTPUT_DIR}mydata.sqlite")
-    df.to_sql("api_data", conn, if_exists="append", index=False)
+    
+    # Use INSERT OR IGNORE to avoid duplicates based on primary key
+    for _, row in df.iterrows():
+        try:
+            conn.execute("""
+            INSERT OR IGNORE INTO api_data 
+            (verseId, ang, pageNo, lineNo, writer, raag, shabadId, verse, translation_en, translation_pu)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                row['verseId'], row['ang'], row['pageNo'], row['lineNo'], 
+                row['writer'], row['raag'], row['shabadId'], row['verse'], 
+                row['translation_en'], row['translation_pu']
+            ))
+        except sqlite3.IntegrityError:
+            # This should not happen with INSERT OR IGNORE, but just in case
+            print(f"Duplicate verseId found: {row['verseId']}")
+            continue
+    
+    conn.commit()
     conn.close()
-    print("✅ Data saved to SQLite (data/mydata.sqlite)")
-   
+    print(f"✅ Saved chunk with {len(chunk_data)} verses to SQLite")
 
 # Main processing loop
 def main():
+    # Setup database with proper table structure
+    setup_database()
     
-
     current_chunk = []
-    chunk_id = 0
+    processed_verse_ids = set()  # Track processed verse IDs to avoid duplicates in memory
 
     for ang_no in tqdm(range(1, MAX_ANGS + 1), desc="Processing Angs"):
         verses = process_ang(ang_no)
-        current_chunk.extend(verses)
+        
+        # Filter out duplicates within the current chunk
+        for verse in verses:
+            verse_id = verse['verseId']
+            if verse_id not in processed_verse_ids:
+                current_chunk.append(verse)
+                processed_verse_ids.add(verse_id)
         
         # Save chunk when reaching CHUNK_SIZE
-        if ang_no % CHUNK_SIZE == 0 or ang_no == MAX_ANGS:
-            save_chunk(current_chunk, chunk_id)
-            current_chunk = []
-            chunk_id += 1
+        if len(current_chunk) >= CHUNK_SIZE or ang_no == MAX_ANGS:
+            save_chunk(current_chunk)
+            current_chunk = []  # Reset chunk
         
         # Be gentle with the API
         time.sleep(0.15)
 
-
 if __name__ == "__main__":
-    main() 
+    main()
